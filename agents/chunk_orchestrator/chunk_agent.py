@@ -300,7 +300,51 @@ class ChunkOrchestrator:
         for para in paragraphs:
             para_tokens = self.count_tokens(para)
 
-            if current_tokens + para_tokens <= max_tokens:
+            # Handle very long paragraphs that exceed max_tokens
+            if para_tokens > max_tokens:
+                # Split long paragraph by sentences/words
+                logger.warning(f"Paragraph exceeds max tokens ({para_tokens} > {max_tokens}), splitting by words")
+
+                # Save current chunk first if it has content
+                if current_chunk:
+                    chunks.append(self._create_chunk_dict(
+                        '\n\n'.join(current_chunk),
+                        chunk_index,
+                        document,
+                        extra_metadata
+                    ))
+                    chunk_index += 1
+                    current_chunk = []
+                    current_tokens = 0
+
+                # Split the long paragraph into word-based chunks
+                words = para.split()
+                word_chunk = []
+                word_chunk_tokens = 0
+
+                for word in words:
+                    word_tokens = self.count_tokens(word + ' ')
+                    if word_chunk_tokens + word_tokens <= max_tokens:
+                        word_chunk.append(word)
+                        word_chunk_tokens += word_tokens
+                    else:
+                        if word_chunk:
+                            chunks.append(self._create_chunk_dict(
+                                ' '.join(word_chunk),
+                                chunk_index,
+                                document,
+                                extra_metadata
+                            ))
+                            chunk_index += 1
+                        word_chunk = [word]
+                        word_chunk_tokens = word_tokens
+
+                # Add remaining words as a chunk
+                if word_chunk:
+                    current_chunk = [' '.join(word_chunk)]
+                    current_tokens = word_chunk_tokens
+
+            elif current_tokens + para_tokens <= max_tokens:
                 current_chunk.append(para)
                 current_tokens += para_tokens
             else:
