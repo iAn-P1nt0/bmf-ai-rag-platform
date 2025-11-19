@@ -89,22 +89,44 @@ def run_document_harvester(**context):
 
 def run_parser_agent(**context):
     """Execute Parser Agent."""
-    # Implementation would go here
-    # from agents.parser.parser_agent import ParserAgent
-    # agent = ParserAgent(...)
-    # report = agent.parse_all_documents()
-    print("Parser Agent execution placeholder")
-    return {'status': 'completed'}
+    from agents.parser.parser_agent import ParserAgent
+
+    site_map_path = os.getenv('SITE_MAP_CONFIG_PATH', './configs/site_map/SITE_MAP.json')
+    html_input_dir = os.getenv('SCRAPER_OUTPUT_DIR', './data/raw/html')
+    pdf_input_dir = os.getenv('HARVESTER_OUTPUT_DIR', './data/raw/pdf')
+    output_dir = os.getenv('PARSER_OUTPUT_DIR', './data/processed')
+
+    agent = ParserAgent(
+        html_input_dir=html_input_dir,
+        pdf_input_dir=pdf_input_dir,
+        output_dir=output_dir,
+        site_map_path=site_map_path
+    )
+
+    report = agent.run_parser()
+    context['task_instance'].xcom_push(key='parser_report', value=report)
+    return report
 
 
 def run_chunk_orchestrator(**context):
     """Execute Chunk Orchestrator."""
-    # Implementation would go here
-    # from agents.chunk_orchestrator.chunk_agent import ChunkOrchestrator
-    # agent = ChunkOrchestrator(...)
-    # report = agent.create_and_ingest_chunks()
-    print("Chunk Orchestrator execution placeholder")
-    return {'status': 'completed'}
+    from agents.chunk_orchestrator.chunk_agent import ChunkOrchestrator
+
+    input_dir = os.getenv('PARSER_OUTPUT_DIR', './data/processed')
+    chunking_config = os.getenv('CHUNKING_CONFIG_PATH', './configs/chunking/chunking.yml')
+    metadata_schema = os.getenv('METADATA_SCHEMA_PATH', './configs/metadata_schema/metadata_schema.json')
+    diff_db_path = os.getenv('SQLITE_DB_PATH', './data/cache/bmf_diff.db')
+
+    orchestrator = ChunkOrchestrator(
+        input_dir=input_dir,
+        chunking_config_path=chunking_config,
+        metadata_schema_path=metadata_schema,
+        diff_db_path=diff_db_path
+    )
+
+    report = orchestrator.run_orchestrator()
+    context['task_instance'].xcom_push(key='chunk_report', value=report)
+    return report
 
 
 def run_validator_agent(**context):

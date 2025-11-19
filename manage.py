@@ -145,6 +145,8 @@ def cmd_pipeline(args):
     from agents.discovery.discovery_agent import DiscoveryAgent
     from agents.scraper.scraper_agent import ScraperAgent
     from agents.document_harvester.harvester_agent import DocumentHarvester
+    from agents.parser.parser_agent import ParserAgent
+    from agents.chunk_orchestrator.chunk_agent import ChunkOrchestrator
 
     config = args.config
 
@@ -163,9 +165,17 @@ def cmd_pipeline(args):
     harvester = DocumentHarvester(site_map_path=config)
     harvester.harvest_all_sections()
 
-    # 4-7 would go here (Parser, Chunker, Validator, Monitoring)
-    logger.info("Step 4/7: Parser Agent (not yet implemented)")
-    logger.info("Step 5/7: Chunk Orchestrator (not yet implemented)")
+    # 4. Parser
+    logger.info("Step 4/7: Parser Agent")
+    parser = ParserAgent(site_map_path=config)
+    parser.run_parser()
+
+    # 5. Chunk Orchestrator
+    logger.info("Step 5/7: Chunk Orchestrator")
+    orchestrator = ChunkOrchestrator()
+    orchestrator.run_orchestrator()
+
+    # 6-7 would go here (Validator, Monitoring)
     logger.info("Step 6/7: Validator Agent (not yet implemented)")
     logger.info("Step 7/7: Monitoring Agent (not yet implemented)")
 
