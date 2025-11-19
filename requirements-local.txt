@@ -1,0 +1,42 @@
+# Simplified requirements for local testing
+# Python >= 3.10 required
+
+# LLM
+anthropic>=0.40.0
+
+# Web Scraping & Parsing
+playwright>=1.40.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+lxml>=4.9.0
+
+# Document Processing
+pypdf>=3.17.0
+python-docx>=1.1.0
+pandas>=2.1.0
+openpyxl>=3.1.0
+tabulate>=0.9.0
+tiktoken>=0.5.0
+
+# Data Storage
+boto3>=1.33.0
+sqlalchemy>=2.0.0
+
+# Validation & Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-html>=3.2.0
+pytest-mock>=3.11.0
+coverage>=7.3.0
+
+# Monitoring & Metrics
+psutil>=5.9.0
+
+# Utilities
+pydantic>=2.5.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+aiohttp>=3.9.0
+tenacity>=8.2.0
+loguru>=0.7.0
