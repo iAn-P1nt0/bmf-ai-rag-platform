@@ -34,8 +34,14 @@ celery>=5.3.0
 
 # Validation & Testing
 pytest>=7.4.0
-great-expectations>=0.18.0
 pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0  # Coverage plugin
+pytest-html>=3.2.0  # HTML reports
+pytest-benchmark>=4.0.0  # Performance benchmarking
+pytest-xdist>=3.3.0  # Parallel test execution
+pytest-mock>=3.11.0  # Mocking utilities
+great-expectations>=0.18.0
+coverage>=7.3.0  # Coverage measurement
 
 # Monitoring & Metrics
 prometheus-client>=0.19.0
