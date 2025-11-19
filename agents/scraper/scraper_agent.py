@@ -12,13 +12,20 @@ from typing import Dict, List, Optional
 import boto3
 from playwright.async_api import async_playwright, Page, Browser
 from loguru import logger
-import redis
+
+# Optional redis for distributed rate limiting
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    logger.warning("Redis not available. Rate limiting will be local only.")
 
 
 class RateLimiter:
     """Redis-based rate limiter for respectful scraping."""
 
-    def __init__(self, rate_limit_rps: float = 2.0, redis_client: Optional[redis.Redis] = None):
+    def __init__(self, rate_limit_rps: float = 2.0, redis_client: Optional[any] = None):
         """
         Initialize rate limiter.
 
