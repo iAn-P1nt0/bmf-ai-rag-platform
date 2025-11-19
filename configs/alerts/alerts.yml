@@ -1,0 +1,207 @@
+version: "1.0.0"
+
+# KPI Thresholds (from CLAUDE.md Section 6)
+thresholds:
+  retrieval:
+    accuracy_target: 0.80
+    accuracy_minimum: 0.75
+    confidence_threshold: 0.6
+    citation_match_rate: 0.90
+
+  latency:
+    target_ms: 500
+    warning_ms: 700
+    critical_ms: 900
+    p95_target_ms: 500
+    p99_target_ms: 750
+
+  coverage:
+    min_active_chunks: 15000
+    max_active_chunks: 20000
+    max_stale_metadata_pct: 3
+    metadata_completeness_min: 90
+
+  pipeline:
+    max_failure_rate_pct: 5
+    max_processing_time_minutes: 120
+    min_daily_ingestion_chunks: 100
+
+# Severity Levels
+severity_levels:
+  sev_0:
+    name: "Critical"
+    description: "Missing compliance documents, data breach, system down"
+    response_time_minutes: 15
+    escalation_immediate: true
+    notification_channels: ["pagerduty", "slack", "email", "sms"]
+
+  sev_1:
+    name: "High"
+    description: "Latency >900ms, relevance <75%, pipeline failure"
+    response_time_minutes: 30
+    escalation_immediate: true
+    notification_channels: ["pagerduty", "slack", "email"]
+
+  sev_2:
+    name: "Medium"
+    description: "Relevance 75-80%, latency 700-900ms, metadata issues"
+    response_time_minutes: 120
+    escalation_immediate: false
+    notification_channels: ["slack", "email"]
+
+  sev_3:
+    name: "Low"
+    description: "Performance degradation, non-critical warnings"
+    response_time_minutes: 480
+    escalation_immediate: false
+    notification_channels: ["email"]
+
+# Alert Rules
+alert_rules:
+  - name: "missing_compliance_document"
+    severity: "sev_0"
+    condition: "compliance_doc_missing == true"
+    description: "Compliance document missing from ingestion"
+    action: "trigger_rollback_and_alert"
+
+  - name: "retrieval_accuracy_critical"
+    severity: "sev_1"
+    condition: "retrieval_accuracy < 0.75"
+    description: "Retrieval accuracy below 75%"
+    action: "pause_production_traffic"
+
+  - name: "latency_critical"
+    severity: "sev_1"
+    condition: "p95_latency_ms > 900"
+    description: "P95 latency exceeds 900ms"
+    action: "scale_resources"
+
+  - name: "pipeline_failure"
+    severity: "sev_1"
+    condition: "pipeline_status == 'failed'"
+    description: "Pipeline execution failed"
+    action: "notify_and_retry"
+
+  - name: "retrieval_accuracy_warning"
+    severity: "sev_2"
+    condition: "retrieval_accuracy >= 0.75 AND retrieval_accuracy < 0.80"
+    description: "Retrieval accuracy between 75-80%"
+    action: "investigate_and_monitor"
+
+  - name: "latency_warning"
+    severity: "sev_2"
+    condition: "p95_latency_ms > 700 AND p95_latency_ms <= 900"
+    description: "P95 latency between 700-900ms"
+    action: "performance_review"
+
+  - name: "stale_metadata_high"
+    severity: "sev_2"
+    condition: "stale_metadata_pct > 3"
+    description: "Stale metadata exceeds 3%"
+    action: "trigger_refresh_cycle"
+
+  - name: "citation_match_low"
+    severity: "sev_2"
+    condition: "citation_match_rate < 0.90"
+    description: "Citation match rate below 90%"
+    action: "review_validation_tests"
+
+  - name: "chunk_count_anomaly"
+    severity: "sev_3"
+    condition: "active_chunks < 15000 OR active_chunks > 20000"
+    description: "Active chunk count outside target range"
+    action: "review_ingestion_pipeline"
+
+# Notification Channels
+notification_channels:
+  pagerduty:
+    enabled: true
+    integration_key: "${PAGERDUTY_API_KEY}"
+    service_id: "bmf-rag-service"
+
+  slack:
+    enabled: true
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channel: "#bmf-rag-ops"
+    mention_on_critical: "@channel"
+
+  email:
+    enabled: true
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    from_address: "noreply@bmf-rag.ai"
+    to_addresses:
+      critical: ["ops-alert@bmf.ai", "cto@bmf.ai"]
+      high: ["ops-alert@bmf.ai"]
+      medium: ["ops-alert@bmf.ai"]
+      low: ["ops-alert@bmf.ai"]
+
+  sms:
+    enabled: true
+    provider: "twilio"
+    numbers:
+      critical: ["+91XXXXXXXXXX"]
+
+# Escalation Tree
+escalation:
+  level_1:
+    role: "On-call Engineer"
+    response_time_minutes: 15
+    contact_method: "pagerduty"
+
+  level_2:
+    role: "Engineering Lead"
+    response_time_minutes: 30
+    contact_method: "pagerduty + phone"
+    escalate_after_minutes: 30
+
+  level_3:
+    role: "Engineering Manager"
+    response_time_minutes: 60
+    contact_method: "phone + email"
+    escalate_after_minutes: 60
+
+  level_4:
+    role: "CTO"
+    response_time_minutes: 120
+    contact_method: "phone"
+    escalate_after_minutes: 120
+
+# Monitoring Schedule
+monitoring:
+  health_check_interval_seconds: 60
+  metrics_collection_interval_seconds: 300
+  alert_evaluation_interval_seconds: 60
+  dashboard_refresh_interval_seconds: 30
+
+  synthetic_queries:
+    enabled: true
+    interval_minutes: 60
+    queries:
+      - "What is the NAV of Bandhan Core Equity Fund?"
+      - "Show me the latest factsheet for debt funds"
+      - "What are the investment objectives of Bandhan Tax Advantage Fund?"
+      - "Who is the fund manager for Bandhan Equity Fund?"
+    expected_latency_ms: 500
+    expected_confidence: 0.8
+
+# Rollback Configuration
+rollback:
+  auto_rollback_enabled: true
+  triggers:
+    - "retrieval_accuracy < 0.70"
+    - "p95_latency_ms > 1200"
+    - "error_rate_pct > 10"
+  backup_retention_days: 30
+  backup_location: "s3://bmf-rag-backups"
+  rollback_notification: true
+  post_rollback_validation: true
+
+# Maintenance Windows
+maintenance_windows:
+  - day: "Sunday"
+    start_time: "02:00"
+    end_time: "06:00"
+    timezone: "Asia/Kolkata"
+    suppress_alerts: false
+    allow_deployments: true

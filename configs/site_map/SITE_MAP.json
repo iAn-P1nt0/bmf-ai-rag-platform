@@ -1,0 +1,124 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-01-19T00:00:00Z",
+  "base_url": "https://bandhanmutual.com",
+  "sections": {
+    "funds": {
+      "url_patterns": [
+        "https://bandhanmutual.com/funds",
+        "https://bandhanmutual.com/funds/*"
+      ],
+      "crawl_frequency": "daily",
+      "priority": "high",
+      "metadata": {
+        "category": "scheme_profiles",
+        "doc_type": "fund_details"
+      },
+      "selectors": {
+        "nav_table": ".nav-table, #nav-data",
+        "risk_ometer": ".risk-meter, .risk-indicator",
+        "fund_name": "h1.fund-name, .scheme-title",
+        "aum": ".aum-value, .fund-size"
+      }
+    },
+    "downloads": {
+      "url_patterns": [
+        "https://bandhanmutual.com/downloads",
+        "https://bandhanmutual.com/downloads/*"
+      ],
+      "crawl_frequency": "daily",
+      "priority": "high",
+      "metadata": {
+        "category": "regulatory_documents",
+        "doc_type": "pdf_downloads"
+      },
+      "file_types": ["pdf", "xlsx", "xls"],
+      "patterns": {
+        "factsheet": ".*factsheet.*\\.pdf$",
+        "kim": ".*kim.*\\.pdf$|.*key.*information.*\\.pdf$",
+        "financial_statements": ".*financial.*statement.*\\.pdf$",
+        "compliance": ".*compliance.*\\.pdf$|.*disclosure.*\\.pdf$"
+      }
+    },
+    "about_us": {
+      "url_patterns": [
+        "https://bandhanmutual.com/about-us",
+        "https://bandhanmutual.com/about-us/*"
+      ],
+      "crawl_frequency": "weekly",
+      "priority": "medium",
+      "metadata": {
+        "category": "corporate_info",
+        "doc_type": "company_overview"
+      },
+      "selectors": {
+        "leadership": ".leadership-team, .board-members",
+        "governance": ".governance-section",
+        "amc_overview": ".about-section, .company-info"
+      }
+    },
+    "investor_education": {
+      "url_patterns": [
+        "https://bandhanmutual.com/investor-education",
+        "https://bandhanmutual.com/investor-education/*"
+      ],
+      "crawl_frequency": "weekly",
+      "priority": "medium",
+      "metadata": {
+        "category": "education",
+        "doc_type": "learning_resources"
+      },
+      "selectors": {
+        "calculators": ".calculator, .tool",
+        "learning_center": ".education-content, .learning-module",
+        "explainer_decks": ".presentation, .slide-deck"
+      }
+    },
+    "newsroom": {
+      "url_patterns": [
+        "https://bandhanmutual.com/newsroom",
+        "https://bandhanmutual.com/newsroom/*",
+        "https://bandhanmutual.com/media",
+        "https://bandhanmutual.com/media/*"
+      ],
+      "crawl_frequency": "daily",
+      "priority": "high",
+      "metadata": {
+        "category": "news_updates",
+        "doc_type": "press_release"
+      },
+      "selectors": {
+        "press_releases": ".press-release, .news-item",
+        "announcements": ".announcement",
+        "publish_date": ".publish-date, .news-date, time"
+      }
+    }
+  },
+  "global_settings": {
+    "respect_robots_txt": true,
+    "rate_limit_rps": 2,
+    "user_agent": "BMF-RAG-Bot/1.0 (contact: ops-alert@bmf.ai)",
+    "timeout_seconds": 30,
+    "max_retries": 3,
+    "javascript_enabled": true,
+    "screenshot_enabled": true,
+    "follow_redirects": true,
+    "max_depth": 3
+  },
+  "exclusions": {
+    "url_patterns": [
+      "*/login",
+      "*/signup",
+      "*/cart",
+      "*/checkout",
+      "*/admin/*"
+    ],
+    "file_extensions": [
+      ".mp4",
+      ".avi",
+      ".mov",
+      ".zip",
+      ".tar.gz"
+    ]
+  }
+}

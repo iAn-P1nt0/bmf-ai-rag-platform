@@ -1,0 +1,213 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "title": "BMF RAG Chunk Metadata Schema",
+  "type": "object",
+  "required": [
+    "chunk_id",
+    "fund_name",
+    "category",
+    "risk_profile",
+    "doc_type",
+    "publish_date",
+    "crawler_version",
+    "checksum",
+    "source_url",
+    "ingestion_timestamp"
+  ],
+  "properties": {
+    "chunk_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "description": "Unique UUID for the chunk"
+    },
+    "fund_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Name of the mutual fund scheme (e.g., 'Bandhan Core Equity Fund')"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "scheme_profiles",
+        "regulatory_documents",
+        "corporate_info",
+        "education",
+        "news_updates",
+        "performance_data",
+        "compliance",
+        "investor_services"
+      ],
+      "description": "Primary category of the content"
+    },
+    "risk_profile": {
+      "type": "string",
+      "enum": [
+        "low",
+        "moderately_low",
+        "moderate",
+        "moderately_high",
+        "high",
+        "very_high",
+        "not_applicable"
+      ],
+      "description": "Risk categorization as per SEBI guidelines"
+    },
+    "doc_type": {
+      "type": "string",
+      "enum": [
+        "fund_details",
+        "factsheet",
+        "kim",
+        "financial_statements",
+        "compliance_report",
+        "press_release",
+        "learning_module",
+        "calculator",
+        "company_overview",
+        "governance_doc",
+        "nav_table",
+        "performance_report"
+      ],
+      "description": "Specific document type"
+    },
+    "publish_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Original publication date (ISO 8601 format)"
+    },
+    "crawler_version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+\\.\\d+$",
+      "description": "Version of crawler that extracted this content (e.g., 'v1.2.3')"
+    },
+    "checksum": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 hash of chunk content for deduplication"
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Original URL of the source document"
+    },
+    "ingestion_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this chunk was ingested into the vector store"
+    },
+    "aum": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["INR", "USD"]
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["crore", "lakh", "million", "billion"]
+        },
+        "as_of_date": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "description": "Assets Under Management details"
+    },
+    "nav_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the NAV data in this chunk"
+    },
+    "nav_value": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Net Asset Value if applicable"
+    },
+    "scheme_code": {
+      "type": "string",
+      "pattern": "^[A-Z0-9\\-]+$",
+      "description": "Official scheme code (e.g., 'BEQF-G')"
+    },
+    "isin": {
+      "type": "string",
+      "pattern": "^INF[A-Z0-9]{9}$",
+      "description": "ISIN code for the scheme"
+    },
+    "benchmark": {
+      "type": "string",
+      "description": "Benchmark index name"
+    },
+    "fund_manager": {
+      "type": "string",
+      "description": "Name of the fund manager"
+    },
+    "page_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Page number in source PDF (if applicable)"
+    },
+    "section_title": {
+      "type": "string",
+      "description": "Title of the section this chunk belongs to"
+    },
+    "has_table": {
+      "type": "boolean",
+      "description": "Whether this chunk contains tabular data"
+    },
+    "has_financial_metrics": {
+      "type": "boolean",
+      "description": "Whether this chunk contains financial calculations or metrics"
+    },
+    "language": {
+      "type": "string",
+      "enum": ["en", "hi"],
+      "default": "en",
+      "description": "Content language"
+    },
+    "compliance_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "sebi_disclaimer_required",
+          "past_performance_warning",
+          "risk_disclosure",
+          "kyc_reminder",
+          "regulatory_update"
+        ]
+      },
+      "description": "Compliance requirements for this content"
+    },
+    "confidence_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Parser confidence in metadata extraction"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version number for tracking chunk updates"
+    },
+    "parent_document_id": {
+      "type": "string",
+      "description": "ID of the parent document this chunk came from"
+    },
+    "chunk_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sequential index of this chunk within parent document"
+    },
+    "total_chunks_in_document": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total number of chunks in the parent document"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Data
+data/raw/
+data/processed/
+data/cache/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Airflow
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+~/airflow/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Backups
+*.bak
+*_backup_*
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Reports
+*_report_*.json
+*_report_*.html
+
+# Screenshots
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# Documents (downloaded)
+*.pdf
+*.xlsx
+*.xls
+*.docx
+
+# Checksum database
+checksums.json
+
+# S3 sync cache
+.s3_sync_cache
+
+# Monitoring
+prometheus_data/
+grafana_data/
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Redis
+dump.rdb
+
+# Keep directory structure but ignore contents
+!data/.gitkeep
+!logs/.gitkeep

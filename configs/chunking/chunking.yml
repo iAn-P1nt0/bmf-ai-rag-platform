@@ -1,0 +1,92 @@
+version: "1.0.0"
+
+chunking_strategy:
+  type: "structure_aware"
+  description: "DOM-element or PDF logical sections with overlapping windows"
+
+token_limits:
+  max_tokens_per_chunk: 1200
+  min_tokens_per_chunk: 100
+  target_tokens_per_chunk: 800
+
+overlap:
+  percentage: 25  # 20-30% as per spec
+  min_overlap_tokens: 50
+  max_overlap_tokens: 360  # 30% of 1200
+
+chunking_rules:
+  html:
+    priority_elements:
+      - "article"
+      - "section"
+      - "div.content"
+      - "div.fund-details"
+      - "div.scheme-info"
+    preserve_structure:
+      - "table"
+      - "ul"
+      - "ol"
+      - "pre"
+      - "code"
+    split_on:
+      - "h1"
+      - "h2"
+      - "h3"
+      - "hr"
+    keep_with_parent:
+      - "img"
+      - "figure"
+      - "caption"
+
+  pdf:
+    logical_sections:
+      - "heading"
+      - "paragraph"
+      - "table"
+      - "list"
+      - "figure"
+    preserve_tables: true
+    preserve_page_numbers: true
+    preserve_footnotes: true
+
+  markdown:
+    split_on_headers: true
+    preserve_code_blocks: true
+    preserve_tables: true
+
+table_handling:
+  preserve_verbatim: true
+  max_table_tokens: 800
+  split_large_tables: true
+  include_headers_in_chunks: true
+  convert_to_markdown: true
+
+metadata_propagation:
+  inherit_from_parent: true
+  required_fields:
+    - "fund_name"
+    - "category"
+    - "risk_profile"
+    - "doc_type"
+    - "publish_date"
+    - "crawler_version"
+    - "checksum"
+  optional_fields:
+    - "aum"
+    - "nav_date"
+    - "scheme_code"
+    - "benchmark"
+    - "fund_manager"
+
+post_processing:
+  clean_whitespace: true
+  remove_duplicate_chunks: true
+  normalize_numbers: true
+  extract_dates: true
+  tag_financial_metrics: true
+
+quality_checks:
+  min_text_quality_score: 0.7
+  max_duplicate_ratio: 0.15
+  require_meaningful_content: true
+  block_navigation_only_chunks: true
