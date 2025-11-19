@@ -66,6 +66,42 @@ def cmd_harvest(args):
     logger.success(f"Harvesting completed: {report['stats']}")
 
 
+def cmd_parse(args):
+    """Run Parser Agent."""
+    from agents.parser.parser_agent import ParserAgent
+
+    logger.info("Running Parser Agent...")
+    agent = ParserAgent(
+        html_input_dir=args.html_dir,
+        pdf_input_dir=args.pdf_dir,
+        output_dir=args.output,
+        site_map_path=args.config
+    )
+
+    sections = [args.section] if args.section else None
+    report = agent.run_parser(sections=sections)
+
+    logger.success(f"Parsing completed: {report['stats']}")
+
+
+def cmd_chunk(args):
+    """Run Chunk Orchestrator."""
+    from agents.chunk_orchestrator.chunk_agent import ChunkOrchestrator
+
+    logger.info("Running Chunk Orchestrator...")
+    orchestrator = ChunkOrchestrator(
+        input_dir=args.input,
+        chunking_config_path=args.chunking_config,
+        metadata_schema_path=args.metadata_schema,
+        diff_db_path=args.diff_db
+    )
+
+    sections = [args.section] if args.section else None
+    report = orchestrator.run_orchestrator(sections=sections)
+
+    logger.success(f"Chunking completed: {report['stats']}")
+
+
 def cmd_query(args):
     """Query the RAG copilot."""
     from src.rag_copilot.claude_rag_copilot import ClaudeRAGCopilot
@@ -297,6 +333,60 @@ Examples:
         help='Output directory'
     )
 
+    # Parse command
+    parse_parser = subparsers.add_parser('parse', help='Run Parser Agent')
+    parse_parser.add_argument(
+        '--config',
+        default='./configs/site_map/SITE_MAP.json',
+        help='Path to SITE_MAP.json'
+    )
+    parse_parser.add_argument(
+        '--html-dir',
+        default='./data/raw/html',
+        help='HTML input directory'
+    )
+    parse_parser.add_argument(
+        '--pdf-dir',
+        default='./data/raw/pdf',
+        help='PDF input directory'
+    )
+    parse_parser.add_argument(
+        '--output',
+        default='./data/processed',
+        help='Output directory'
+    )
+    parse_parser.add_argument(
+        '--section',
+        help='Specific section to parse'
+    )
+
+    # Chunk command
+    chunk_parser = subparsers.add_parser('chunk', help='Run Chunk Orchestrator')
+    chunk_parser.add_argument(
+        '--input',
+        default='./data/processed',
+        help='Parsed documents directory'
+    )
+    chunk_parser.add_argument(
+        '--chunking-config',
+        default='./configs/chunking/chunking.yml',
+        help='Path to chunking.yml'
+    )
+    chunk_parser.add_argument(
+        '--metadata-schema',
+        default='./configs/metadata_schema/metadata_schema.json',
+        help='Path to metadata_schema.json'
+    )
+    chunk_parser.add_argument(
+        '--diff-db',
+        default='./data/cache/bmf_diff.db',
+        help='Path to SQLite diff database'
+    )
+    chunk_parser.add_argument(
+        '--section',
+        help='Specific section to chunk'
+    )
+
     # Query command
     query_parser = subparsers.add_parser('query', help='Query RAG copilot')
     query_parser.add_argument('query', help='Query string')
@@ -329,6 +419,8 @@ Examples:
         'discovery': cmd_discovery,
         'scrape': cmd_scrape,
         'harvest': cmd_harvest,
+        'parse': cmd_parse,
+        'chunk': cmd_chunk,
         'query': cmd_query,
         'validate': cmd_validate,
         'pipeline': cmd_pipeline,

@@ -12,10 +12,13 @@ lxml>=4.9.0
 
 # Document Processing
 unstructured>=0.11.0
+unstructured[pdf]>=0.11.0
 pypdf>=3.17.0
 python-docx>=1.1.0
 pandas>=2.1.0
 openpyxl>=3.1.0
+tabulate>=0.9.0  # For markdown table rendering
+tiktoken>=0.5.0  # For token counting
 
 # Vector Store & Embeddings
 agentset-sdk>=1.0.0
