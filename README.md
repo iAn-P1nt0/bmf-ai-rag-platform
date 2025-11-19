@@ -1,11 +1,11 @@
 # BMF AI RAG Platform
 
-Bandhan Mutual Fund AI-powered RAG (Retrieval-Augmented Generation) platform for intelligent asset management query assistance.
+BMF AI-powered RAG (Retrieval-Augmented Generation) platform for intelligent asset management query assistance.
 
 ## Overview
 
 The BMF AI RAG Platform is an end-to-end system that:
-- Scrapes and ingests content from bandhanmutual.com
+- Scrapes and ingests content from BMF
 - Processes documents into searchable chunks with rich metadata
 - Provides a Claude-powered copilot for answering fund queries with grounded citations
 - Maintains compliance with regulatory requirements and disclaimers
@@ -94,7 +94,7 @@ print(response.answer)
 ## Configuration Files
 
 ### Site Map (`configs/site_map/SITE_MAP.json`)
-Defines target sections, URL patterns, and scraping rules for bandhanmutual.com
+Defines target sections, URL patterns, and scraping rules for bmf
 
 ### Chunking Policy (`configs/chunking/chunking.yml`)
 - Max 1,200 tokens per chunk
@@ -248,10 +248,4 @@ bmf-ai-rag-platform/
 
 ## License
 
-Proprietary - Bandhan Mutual Fund
-
-## Contact
-
-For issues or questions:
-- Operations: ops-alert@bmf.ai
-- Development: rag-team@bmf.ai
+Proprietary Do Not Copy
