@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2025-01-19T00:00:00Z",
+  "last_updated": "2025-11-19T20:31:54.759818+00:00",
   "base_url": "https://bandhanmutual.com",
   "sections": {
     "funds": {
@@ -19,7 +19,10 @@
         "risk_ometer": ".risk-meter, .risk-indicator",
         "fund_name": "h1.fund-name, .scheme-title",
         "aum": ".aum-value, .fund-size"
-      }
+      },
+      "discovered_urls": [],
+      "url_count": 0,
+      "last_discovery": "2025-11-19T20:31:53.668994+00:00"
     },
     "downloads": {
       "url_patterns": [
@@ -32,13 +35,20 @@
         "category": "regulatory_documents",
         "doc_type": "pdf_downloads"
       },
-      "file_types": ["pdf", "xlsx", "xls"],
+      "file_types": [
+        "pdf",
+        "xlsx",
+        "xls"
+      ],
       "patterns": {
         "factsheet": ".*factsheet.*\\.pdf$",
         "kim": ".*kim.*\\.pdf$|.*key.*information.*\\.pdf$",
         "financial_statements": ".*financial.*statement.*\\.pdf$",
         "compliance": ".*compliance.*\\.pdf$|.*disclosure.*\\.pdf$"
-      }
+      },
+      "discovered_urls": [],
+      "url_count": 0,
+      "last_discovery": "2025-11-19T20:31:53.875455+00:00"
     },
     "about_us": {
       "url_patterns": [
@@ -55,7 +65,10 @@
         "leadership": ".leadership-team, .board-members",
         "governance": ".governance-section",
         "amc_overview": ".about-section, .company-info"
-      }
+      },
+      "discovered_urls": [],
+      "url_count": 0,
+      "last_discovery": "2025-11-19T20:31:54.090742+00:00"
     },
     "investor_education": {
       "url_patterns": [
@@ -72,7 +85,10 @@
         "calculators": ".calculator, .tool",
         "learning_center": ".education-content, .learning-module",
         "explainer_decks": ".presentation, .slide-deck"
-      }
+      },
+      "discovered_urls": [],
+      "url_count": 0,
+      "last_discovery": "2025-11-19T20:31:54.300979+00:00"
     },
     "newsroom": {
       "url_patterns": [
@@ -91,7 +107,10 @@
         "press_releases": ".press-release, .news-item",
         "announcements": ".announcement",
         "publish_date": ".publish-date, .news-date, time"
-      }
+      },
+      "discovered_urls": [],
+      "url_count": 0,
+      "last_discovery": "2025-11-19T20:31:54.759679+00:00"
     }
   },
   "global_settings": {
