@@ -448,7 +448,26 @@ Examples:
     query_parser.add_argument('query', help='Query string')
 
     # Validate command
-    validate_parser = subparsers.add_parser('validate', help='Run validation tests')
+    validate_parser = subparsers.add_parser('validate', help='Run validation tests or quality checks')
+    validate_parser.add_argument(
+        '--test',
+        action='store_true',
+        help='Run pytest tests instead of Validator Agent'
+    )
+
+    # Monitor command
+    monitor_parser = subparsers.add_parser('monitor', help='Run Monitoring Agent')
+    monitor_parser.add_argument(
+        '--port',
+        type=int,
+        default=8000,
+        help='Prometheus metrics port (default: 8000)'
+    )
+    monitor_parser.add_argument(
+        '--prometheus',
+        action='store_true',
+        help='Enable Prometheus HTTP server'
+    )
 
     # Pipeline command
     pipeline_parser = subparsers.add_parser('pipeline', help='Run full pipeline')
