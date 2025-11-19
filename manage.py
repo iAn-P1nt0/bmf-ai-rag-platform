@@ -124,17 +124,63 @@ def cmd_query(args):
 
 
 def cmd_validate(args):
-    """Run validation tests."""
-    logger.info("Running validation tests...")
+    """Run validation tests or quality validation on chunks."""
+    if args.test:
+        # Run pytest validation
+        logger.info("Running validation tests...")
+        import subprocess
+        result = subprocess.run(
+            ['pytest', 'tests/', '-v', '--tb=short'],
+            capture_output=False
+        )
+        sys.exit(result.returncode)
+    else:
+        # Run Validator Agent on processed chunks
+        logger.info("Running Validator Agent...")
+        from agents.validator.validator_agent import ValidatorAgent
 
-    # Run pytest on tests directory
-    import subprocess
-    result = subprocess.run(
-        ['pytest', 'tests/', '-v', '--tb=short'],
-        capture_output=False
+        validator = ValidatorAgent(
+            config_path="./configs/validation/validation_config.json",
+            chunks_dir="./data/processed/chunks"
+        )
+
+        report = validator.run_validator()
+
+        logger.info(f"Validation Status: {report.get('overall_status', 'UNKNOWN')}")
+        logger.info(f"Report saved to: logs/validation/")
+
+
+def cmd_monitor(args):
+    """Run monitoring agent."""
+    logger.info("Starting Monitoring Agent...")
+    from agents.monitoring.monitoring_agent import MonitoringAgent
+
+    monitor = MonitoringAgent(
+        alerts_config="./configs/alerts/alerts.yml",
+        metrics_port=args.port or 8000,
+        enable_prometheus=args.prometheus
     )
 
-    sys.exit(result.returncode)
+    # Load sample chunks for staleness check if available
+    import json
+    from pathlib import Path
+
+    chunks_metadata = []
+    chunks_dir = Path("./data/processed/chunks")
+    if chunks_dir.exists():
+        chunk_files = list(chunks_dir.glob("**/*.json"))
+        if chunk_files:
+            try:
+                with open(chunk_files[0], 'r') as f:
+                    data = json.load(f)
+                    chunks_metadata = data if isinstance(data, list) else data.get('chunks', [])
+            except:
+                pass
+
+    report = monitor.run_monitoring(chunks_metadata=chunks_metadata)
+
+    logger.info(f"System Status: {report['overall_status']}")
+    logger.info(f"Active Alerts: {report['active_alerts']}")
 
 
 def cmd_pipeline(args):
