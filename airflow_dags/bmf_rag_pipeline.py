@@ -3,11 +3,15 @@ Airflow DAG for BMF RAG Pipeline
 Orchestrates the 7 agents in sequence per AGENTS.md
 """
 from datetime import datetime, timedelta
+from pathlib import Path
+import json
+import logging
+import os
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
-from airflow.utils.task_group import TaskGroup
-import os
+
+logger = logging.getLogger(__name__)
 
 
 default_args = {
@@ -30,6 +34,28 @@ dag = DAG(
     catchup=False,
     tags=['bmf', 'rag', 'production']
 )
+
+
+def _load_chunks_metadata_sample(chunks_dir: str):
+    """Load representative chunk metadata for monitoring checks."""
+    path = Path(chunks_dir)
+    if not path.exists():
+        return []
+
+    chunk_files = sorted(path.glob('**/*.json'))
+    for chunk_file in chunk_files:
+        try:
+            with open(chunk_file, 'r') as handle:
+                data = json.load(handle)
+
+            if isinstance(data, list):
+                return data
+            if isinstance(data, dict):
+                return data.get('chunks', []) or data.get('records', []) or []
+        except Exception as exc:
+            logger.warning("Unable to load chunk file %s: %s", chunk_file, exc)
+
+    return []
 
 
 def run_discovery_agent(**context):
@@ -172,9 +198,29 @@ def check_validation_results(**context):
     return {'status': 'passed'}
 
 
+def run_monitoring_agent(**context):
+    """Execute Monitoring Agent for observability checks."""
+    from agents.monitoring.monitoring_agent import MonitoringAgent
+
+    alerts_config = os.getenv('ALERTS_CONFIG_PATH', './configs/alerts/alerts.yml')
+    chunks_dir = os.getenv('CHUNKS_DIR', './data/processed/chunks')
+    metrics_port = int(os.getenv('MONITORING_METRICS_PORT', '8000'))
+
+    chunks_metadata = _load_chunks_metadata_sample(chunks_dir)
+
+    monitor = MonitoringAgent(
+        alerts_config=alerts_config,
+        metrics_port=metrics_port,
+        enable_prometheus=False
+    )
+
+    report = monitor.run_monitoring(chunks_metadata=chunks_metadata)
+    context['task_instance'].xcom_push(key='monitoring_report', value=report)
+    return report
+
+
 def send_pipeline_report(**context):
     """Send pipeline completion report."""
-    import json
     from loguru import logger
 
     # Gather all reports
@@ -187,11 +233,23 @@ def send_pipeline_report(**context):
         key='scraper_report'
     )
 
+    validator_report = context['task_instance'].xcom_pull(
+        task_ids='validator_agent',
+        key='validator_report'
+    )
+
+    monitoring_report = context['task_instance'].xcom_pull(
+        task_ids='monitoring_agent',
+        key='monitoring_report'
+    )
+
     pipeline_report = {
         'pipeline_run_date': context['execution_date'].isoformat(),
         'status': 'success',
         'discovery': discovery_report,
         'scraper': scraper_report,
+        'validator': validator_report,
+        'monitoring': monitoring_report,
         'timestamp': datetime.utcnow().isoformat()
     }
 
@@ -250,6 +308,12 @@ validation_check_task = PythonOperator(
     dag=dag
 )
 
+monitoring_task = PythonOperator(
+    task_id='monitoring_agent',
+    python_callable=run_monitoring_agent,
+    dag=dag
+)
+
 # Task 8: Report Generation
 report_task = PythonOperator(
     task_id='send_pipeline_report',
@@ -258,19 +322,4 @@ report_task = PythonOperator(
 )
 
 # Define task dependencies (sequential pipeline)
-discovery_task >> scraper_task >> harvester_task >> parser_task >> chunker_task >> validator_task >> validation_check_task >> report_task
-
-# Optional: Add monitoring task that runs in parallel
-with TaskGroup('monitoring', dag=dag) as monitoring_group:
-    monitor_latency = BashOperator(
-        task_id='monitor_latency',
-        bash_command='echo "Monitoring latency metrics..."'
-    )
-
-    monitor_accuracy = BashOperator(
-        task_id='monitor_accuracy',
-        bash_command='echo "Monitoring accuracy metrics..."'
-    )
-
-# Monitoring runs independently
-[discovery_task, scraper_task, harvester_task, parser_task, chunker_task, validator_task] >> monitoring_group
+discovery_task >> scraper_task >> harvester_task >> parser_task >> chunker_task >> validator_task >> validation_check_task >> monitoring_task >> report_task
