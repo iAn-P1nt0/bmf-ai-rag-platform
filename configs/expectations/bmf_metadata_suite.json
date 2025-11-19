@@ -1,0 +1,89 @@
+{
+  "suite_name": "bmf_metadata_suite",
+  "created_at": "2025-02-15T00:00:00Z",
+  "expectations": [
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "min_value": 1,
+        "max_value": 50000
+      },
+      "notes": "Sanity check ensuring we actually loaded chunks before validation"
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "chunk_id"
+      },
+      "notes": "Every row must have a stable chunk identifier"
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "fund_name",
+        "mostly": 0.95
+      },
+      "notes": "Fund name is required for downstream attribution and search filters"
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "doc_type",
+        "mostly": 0.95
+      },
+      "notes": "Doc type feeds the routing and compliance validators"
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "publish_date",
+        "mostly": 0.9
+      },
+      "notes": "Publish dates drive staleness monitoring and diffing"
+    },
+    {
+      "expectation_type": "expect_column_values_to_match_regex",
+      "kwargs": {
+        "column": "checksum",
+        "regex": "^[a-f0-9]{64}$"
+      },
+      "notes": "Checksums must be valid SHA-256 hashes for dedupe"
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "token_count",
+        "min_value": 100,
+        "max_value": 1200,
+        "mostly": 0.9
+      },
+      "notes": "Enforce chunk size policy (100-1200 tokens)"
+    },
+    {
+      "expectation_type": "expect_column_values_to_match_strftime_format",
+      "kwargs": {
+        "column": "publish_date",
+        "strftime_format": "%Y-%m-%dT%H:%M:%S%z"
+      },
+      "notes": "Publish dates must be ISO timestamps"
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "category",
+        "value_set": [
+          "scheme_profiles",
+          "regulatory_documents",
+          "corporate_info",
+          "education",
+          "news_updates",
+          "performance_data",
+          "compliance",
+          "investor_services"
+        ],
+        "mostly": 0.9
+      },
+      "notes": "Category must align with metadata schema values"
+    }
+  ]
+}

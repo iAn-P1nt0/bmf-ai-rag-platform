@@ -52,6 +52,9 @@ class ValidatorAgent:
         # Load validation config
         self.config = self._load_config()
 
+        reporting_cfg = self.config.get('reporting', {})
+        self.issue_sample_limit = reporting_cfg.get('max_issue_samples', 10)
+
         # Stats tracking
         self.stats = {
             'total_chunks_validated': 0,
@@ -72,13 +75,23 @@ class ValidatorAgent:
             logger.warning(f"Config not found at {self.config_path}, using defaults")
             return {
                 'metadata_completeness_threshold': 0.90,
+                'quality_rate_threshold': 0.85,
+                'compliance_rate_threshold': 0.95,
                 'required_metadata_fields': [
                     'chunk_id', 'fund_name', 'category', 'doc_type',
                     'publish_date', 'checksum'
                 ],
+                'optional_metadata_fields': [],
                 'regression_test_path': 'tests/regression/test_rag_regression.py',
                 'citation_match_threshold': 0.90,
-                'retrieval_accuracy_threshold': 0.80
+                'retrieval_accuracy_threshold': 0.80,
+                'great_expectations': {
+                    'enabled': False,
+                    'suite_path': ''
+                },
+                'reporting': {
+                    'max_issue_samples': 10
+                }
             }
 
     def validate_metadata_completeness(self, chunks: List[Dict]) -> Dict:
@@ -129,7 +142,7 @@ class ValidatorAgent:
             'completeness_rate': completeness,
             'threshold': threshold,
             'passed_threshold': completeness >= threshold,
-            'issues': issues[:10] if len(issues) > 10 else issues  # Sample issues
+            'issues': issues[:self.issue_sample_limit]
         }
 
         if completeness >= threshold:
@@ -152,6 +165,8 @@ class ValidatorAgent:
         logger.info("Validating chunk quality metrics")
 
         issues = []
+
+        threshold = self.config.get('quality_rate_threshold', 0.85)
 
         for chunk in chunks:
             chunk_id = chunk.get('chunk_id', 'unknown')
@@ -185,7 +200,9 @@ class ValidatorAgent:
             'passed': passed,
             'failed': len(issues),
             'quality_rate': quality_rate,
-            'issues': issues[:10] if len(issues) > 10 else issues
+            'threshold': threshold,
+            'passed_threshold': quality_rate >= threshold,
+            'issues': issues[:self.issue_sample_limit]
         }
 
     def run_regression_tests(self) -> Dict:
@@ -274,9 +291,14 @@ class ValidatorAgent:
             'mutual fund investments are subject to market risks'
         ]
 
+        compliance_categories = self.config.get(
+            'compliance_categories',
+            ['compliance', 'regulatory', 'factsheet', 'kim']
+        )
+
         compliance_chunks = [
             c for c in chunks
-            if c.get('metadata', {}).get('category') in ['compliance', 'regulatory', 'factsheet', 'kim']
+            if c.get('metadata', {}).get('category') in compliance_categories
         ]
 
         issues = []
@@ -298,11 +320,17 @@ class ValidatorAgent:
 
         self.stats['compliance_issues'] = len(issues)
 
+        threshold = self.config.get('compliance_rate_threshold', 0.95)
+
+        compliance_rate = 1.0 - (len(issues) / len(compliance_chunks)) if compliance_chunks else 1.0
+
         report = {
             'total_compliance_chunks': len(compliance_chunks),
             'chunks_with_issues': len(issues),
-            'compliance_rate': 1.0 - (len(issues) / len(compliance_chunks)) if compliance_chunks else 1.0,
-            'issues': issues
+            'compliance_rate': compliance_rate,
+            'threshold': threshold,
+            'passed_threshold': compliance_rate >= threshold,
+            'issues': issues[:self.issue_sample_limit]
         }
 
         if len(issues) == 0:
@@ -311,6 +339,131 @@ class ValidatorAgent:
             logger.warning(f"✗ {len(issues)} compliance documents missing disclaimers")
 
         return report
+
+    def _prepare_chunk_dataframe(self, chunks: List[Dict]):
+        """Flatten chunk metadata for Great Expectations."""
+        try:
+            import pandas as pd
+        except ImportError:
+            logger.warning("Pandas not installed. Skipping Great Expectations suite.")
+            return None
+
+        rows = []
+        required_fields = self.config.get('required_metadata_fields', [])
+        optional_fields = self.config.get('optional_metadata_fields', [])
+        fields_to_capture = list(dict.fromkeys(required_fields + optional_fields))
+
+        for chunk in chunks:
+            metadata = chunk.get('metadata', {})
+            row = {
+                'chunk_id': chunk.get('chunk_id'),
+                'token_count': chunk.get('token_count', 0),
+                'content_length': len(chunk.get('content', '') or ''),
+                'checksum': metadata.get('checksum') or chunk.get('checksum'),
+                'publish_date': metadata.get('publish_date'),
+                'category': metadata.get('category'),
+                'doc_type': metadata.get('doc_type'),
+                'risk_profile': metadata.get('risk_profile'),
+                'source_url': metadata.get('source_url')
+            }
+
+            for field in fields_to_capture:
+                row[field] = metadata.get(field)
+
+            rows.append(row)
+
+        if not rows:
+            return None
+
+        return pd.DataFrame(rows)
+
+    def run_great_expectations_suite(self, chunks: List[Dict]) -> Dict:
+        """Run configured Great Expectations suite against chunk dataframe."""
+        gx_config = self.config.get('great_expectations', {})
+        if not gx_config.get('enabled', False):
+            return {'status': 'skipped', 'reason': 'disabled_in_config'}
+
+        if not GX_AVAILABLE:
+            return {'status': 'skipped', 'reason': 'great_expectations_not_installed'}
+
+        suite_path = gx_config.get('suite_path')
+        if not suite_path:
+            return {'status': 'skipped', 'reason': 'suite_path_not_configured'}
+
+        suite_file = Path(suite_path)
+        if not suite_file.exists():
+            return {'status': 'skipped', 'reason': 'suite_file_missing', 'path': suite_path}
+
+        df = self._prepare_chunk_dataframe(chunks)
+        if df is None:
+            return {'status': 'skipped', 'reason': 'no_data_frame'}
+
+        try:
+            with open(suite_file, 'r') as f:
+                suite_definition = json.load(f)
+        except Exception as exc:
+            logger.error(f"Failed to load expectation suite: {exc}")
+            return {'status': 'error', 'error': str(exc)}
+
+        expectations = suite_definition.get('expectations', [])
+        if not expectations:
+            return {'status': 'skipped', 'reason': 'no_expectations_defined'}
+
+        try:
+            from great_expectations.dataset import PandasDataset  # type: ignore
+        except ImportError as exc:
+            logger.warning(f"Great Expectations PandasDataset unavailable: {exc}")
+            return {'status': 'skipped', 'reason': 'pandas_dataset_unavailable'}
+
+        dataset = PandasDataset(df)
+        results = []
+        overall_success = True
+
+        for expectation in expectations:
+            expectation_type = expectation.get('expectation_type')
+            kwargs = expectation.get('kwargs', {})
+            notes = expectation.get('notes')
+
+            if not expectation_type:
+                continue
+
+            expectation_fn = getattr(dataset, expectation_type, None)
+            if not expectation_fn:
+                logger.warning(f"Expectation {expectation_type} not supported by PandasDataset")
+                results.append({
+                    'expectation_type': expectation_type,
+                    'status': 'unsupported'
+                })
+                continue
+
+            try:
+                result = expectation_fn(**kwargs)
+                success = bool(result.success)
+                overall_success = overall_success and success
+                results.append({
+                    'expectation_type': expectation_type,
+                    'success': success,
+                    'kwargs': kwargs,
+                    'notes': notes
+                })
+            except Exception as exc:
+                overall_success = False
+                logger.error(f"Expectation {expectation_type} failed: {exc}")
+                results.append({
+                    'expectation_type': expectation_type,
+                    'success': False,
+                    'error': str(exc),
+                    'status': 'error'
+                })
+
+        status = 'completed' if overall_success else 'failed'
+
+        return {
+            'status': status,
+            'success': overall_success,
+            'suite_name': suite_definition.get('suite_name', gx_config.get('suite_name')),
+            'results': results
+        }
 
     def validate_chunks_from_file(self, chunks_file: Path) -> Dict:
         """
@@ -357,12 +510,15 @@ class ValidatorAgent:
         quality_report = self.validate_chunk_quality(chunks)
         compliance_report = self.check_compliance_docs(chunks)
         regression_report = self.run_regression_tests()
+        gx_report = self.run_great_expectations_suite(chunks)
 
         # Calculate overall pass/fail
         passed = (
             metadata_report.get('passed_threshold', False) and
-            quality_report.get('quality_rate', 0) > 0.85 and
-            compliance_report.get('compliance_rate', 0) > 0.95
+            quality_report.get('passed_threshold', False) and
+            compliance_report.get('passed_threshold', False) and
+            gx_report.get('status') in ['completed', 'skipped'] and
+            gx_report.get('success', True)
         )
 
         self.stats['chunks_passed'] = metadata_report['passed']
@@ -376,6 +532,7 @@ class ValidatorAgent:
             'quality_validation': quality_report,
             'compliance_validation': compliance_report,
             'regression_validation': regression_report,
+            'great_expectations_validation': gx_report,
             'stats': self.stats
         }
 
@@ -390,7 +547,7 @@ class ValidatorAgent:
         report_file = self.reports_dir / f"validation_report_{timestamp}.json"
 
         with open(report_file, 'w') as f:
-            json.dump(report, indent=2, fp=f)
+            json.dump(report, f, indent=2)
 
         logger.info(f"Validation report saved to {report_file}")
 

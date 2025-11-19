@@ -131,12 +131,23 @@ def run_chunk_orchestrator(**context):
 
 def run_validator_agent(**context):
     """Execute Validator Agent."""
-    # Implementation would go here
-    # from agents.validator.validator_agent import ValidatorAgent
-    # agent = ValidatorAgent(...)
-    # report = agent.validate_pipeline()
-    print("Validator Agent execution placeholder")
-    return {'status': 'completed'}
+    from agents.validator.validator_agent import ValidatorAgent
+
+    config_path = os.getenv('VALIDATION_CONFIG_PATH', './configs/validation/validation_config.json')
+    chunks_dir = os.getenv('CHUNKS_DIR', './data/processed/chunks')
+
+    validator = ValidatorAgent(
+        config_path=config_path,
+        chunks_dir=chunks_dir
+    )
+
+    report = validator.run_validator()
+    context['task_instance'].xcom_push(key='validator_report', value=report)
+
+    if report.get('overall_status') != 'PASSED':
+        raise ValueError('Validator Agent failed quality gates. See validation report for details.')
+
+    return report
 
 
 def check_validation_results(**context):
@@ -146,13 +157,19 @@ def check_validation_results(**context):
         key='return_value'
     )
 
-    # Check validation KPIs
-    # - <90% chunks have mandatory metadata -> FAIL
-    # - Retrieval eval <80% relevance -> FAIL
-    # - Compliance docs missing disclaimers -> FAIL
+    if not validator_report:
+        raise ValueError('Validator report missing from XCom.')
 
-    # For now, simple pass
-    return True
+    metadata_ok = validator_report.get('metadata_validation', {}).get('passed_threshold', False)
+    quality_ok = validator_report.get('quality_validation', {}).get('passed_threshold', False)
+    compliance_ok = validator_report.get('compliance_validation', {}).get('passed_threshold', False)
+    regression_ok = validator_report.get('regression_validation', {}).get('passed_threshold', True)
+    suite_ok = validator_report.get('great_expectations_validation', {}).get('success', True)
+
+    if not all([metadata_ok, quality_ok, compliance_ok, regression_ok, suite_ok]):
+        raise ValueError('Validation checks failed. Pipeline halted before deployment.')
+
+    return {'status': 'passed'}
 
 
 def send_pipeline_report(**context):

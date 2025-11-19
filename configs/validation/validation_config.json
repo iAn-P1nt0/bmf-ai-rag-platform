@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "description": "Validation policy for the BMF RAG chunk pipeline. Thresholds mirror CLAUDE.md guardrails and AGENTS.md Validator requirements.",
+  "metadata_completeness_threshold": 0.9,
+  "quality_rate_threshold": 0.85,
+  "compliance_rate_threshold": 0.95,
+  "required_metadata_fields": [
+    "chunk_id",
+    "fund_name",
+    "category",
+    "risk_profile",
+    "doc_type",
+    "publish_date",
+    "crawler_version",
+    "checksum",
+    "source_url"
+  ],
+  "optional_metadata_fields": [
+    "aum",
+    "nav_value",
+    "nav_date",
+    "scheme_code",
+    "benchmark",
+    "fund_manager",
+    "isin",
+    "language",
+    "compliance_flags"
+  ],
+  "regression_test_path": "tests/regression/test_rag_regression.py",
+  "citation_match_threshold": 0.9,
+  "retrieval_accuracy_threshold": 0.8,
+  "compliance_categories": [
+    "compliance",
+    "regulatory",
+    "factsheet",
+    "kim"
+  ],
+  "great_expectations": {
+    "enabled": true,
+    "suite_name": "bmf_metadata_suite",
+    "suite_path": "./configs/expectations/bmf_metadata_suite.json",
+    "datasource": "bmf_chunks_runtime"
+  },
+  "reporting": {
+    "reports_dir": "./logs/validation",
+    "max_issue_samples": 10
+  }
+}

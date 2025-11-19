@@ -21,6 +21,29 @@ def setup_logging(verbose: bool = False):
     )
 
 
+def _load_chunks_metadata_sample(chunks_dir: Path):
+    """Load a representative chunk file for validation/monitoring context."""
+    import json
+
+    if not chunks_dir.exists():
+        return []
+
+    chunk_files = sorted(chunks_dir.glob("**/*.json"))
+    for chunk_file in chunk_files:
+        try:
+            with open(chunk_file, 'r') as handle:
+                data = json.load(handle)
+
+            if isinstance(data, list):
+                return data
+            if isinstance(data, dict):
+                return data.get('chunks', []) or data.get('records', []) or []
+        except Exception as exc:
+            logger.warning(f"Unable to load chunk file {chunk_file}: {exc}")
+
+    return []
+
+
 def cmd_discovery(args):
     """Run Discovery Agent."""
     from agents.discovery.discovery_agent import DiscoveryAgent
@@ -161,21 +184,8 @@ def cmd_monitor(args):
         enable_prometheus=args.prometheus
     )
 
-    # Load sample chunks for staleness check if available
-    import json
-    from pathlib import Path
-
-    chunks_metadata = []
     chunks_dir = Path("./data/processed/chunks")
-    if chunks_dir.exists():
-        chunk_files = list(chunks_dir.glob("**/*.json"))
-        if chunk_files:
-            try:
-                with open(chunk_files[0], 'r') as f:
-                    data = json.load(f)
-                    chunks_metadata = data if isinstance(data, list) else data.get('chunks', [])
-            except:
-                pass
+    chunks_metadata = _load_chunks_metadata_sample(chunks_dir)
 
     report = monitor.run_monitoring(chunks_metadata=chunks_metadata)
 
@@ -193,6 +203,8 @@ def cmd_pipeline(args):
     from agents.document_harvester.harvester_agent import DocumentHarvester
     from agents.parser.parser_agent import ParserAgent
     from agents.chunk_orchestrator.chunk_agent import ChunkOrchestrator
+    from agents.validator.validator_agent import ValidatorAgent
+    from agents.monitoring.monitoring_agent import MonitoringAgent
 
     config = args.config
 
@@ -221,9 +233,28 @@ def cmd_pipeline(args):
     orchestrator = ChunkOrchestrator()
     orchestrator.run_orchestrator()
 
-    # 6-7 would go here (Validator, Monitoring)
-    logger.info("Step 6/7: Validator Agent (not yet implemented)")
-    logger.info("Step 7/7: Monitoring Agent (not yet implemented)")
+    chunks_dir = Path('./data/processed/chunks')
+
+    # 6. Validator
+    logger.info("Step 6/7: Validator Agent")
+    validator = ValidatorAgent(
+        config_path="./configs/validation/validation_config.json",
+        chunks_dir=str(chunks_dir)
+    )
+    validation_report = validator.run_validator()
+    if validation_report.get('overall_status') != 'PASSED':
+        raise RuntimeError("Validator Agent failed quality checks. Inspect logs/validation for details.")
+    logger.success("Validator Agent passed all gates")
+
+    # 7. Monitoring
+    logger.info("Step 7/7: Monitoring Agent")
+    monitor = MonitoringAgent(
+        alerts_config="./configs/alerts/alerts.yml",
+        enable_prometheus=False
+    )
+    chunks_metadata = _load_chunks_metadata_sample(chunks_dir)
+    monitor_report = monitor.run_monitoring(chunks_metadata=chunks_metadata)
+    logger.success(f"Monitoring Agent status: {monitor_report['overall_status']}")
 
     logger.success("Pipeline execution completed!")
 
@@ -498,6 +529,7 @@ Examples:
         'chunk': cmd_chunk,
         'query': cmd_query,
         'validate': cmd_validate,
+        'monitor': cmd_monitor,
         'pipeline': cmd_pipeline,
         'status': cmd_status
     }
